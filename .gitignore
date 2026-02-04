@@ -1,0 +1,18 @@
+# Dados brutos e pesados
+data/raw/
+data/processed/
+
+# Ambiente Virtual
+.venv/
+venv/
+env/
+
+# Arquivos de sistema e cache
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
+# Logs de teste e execução
+*.log
+test_results.txt
