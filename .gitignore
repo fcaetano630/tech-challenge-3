@@ -1,18 +1,28 @@
-# Dados brutos e pesados
+# --- Dados e Modelos (Obrigatório ignorar devido ao tamanho) ---
 data/raw/
 data/processed/
+model/
+outputs/
+.cache/
 
-# Ambiente Virtual
+# --- Configurações e Segredos ---
+.env
+.ipynb_checkpoints/
+
+# --- Ambiente Virtual ---
 .venv/
 venv/
 env/
+virtualenv/
 
-# Arquivos de sistema e cache
+# --- Arquivos de sistema e cache ---
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .DS_Store
-.env
+Thumbs.db
 
-# Logs de teste e execução
+# --- Logs e Performance ---
 *.log
-test_results.txt
+wandb/
+.pytest_cache/
