@@ -1,0 +1,6 @@
+ID: 88754 | DATA: 10/03/2024
+PACIENTE: Roberto Nunes, 34 anos.
+DIAGNÓSTICO: Ruptura Total do Ligamento Cruzado Anterior (LCA) - Joelho Esquerdo.
+CAUSA: Trauma torcional durante partida de futebol há 48 horas. Apresenta edema acentuado (grau +++/4) e instabilidade ao teste de Lachman.
+PLANO: Encaminhamento para Cirurgia de Reconstrução de LCA via artroscopia.
+OBSERVAÇÃO: Iniciar fisioterapia pré-operatória imediata para redução do edema e ganho de ADM (Amplitude de Movimento).

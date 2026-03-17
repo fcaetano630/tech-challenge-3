@@ -1,0 +1,6 @@
+ID: 44921 | DATA: 15/03/2024
+PACIENTE: Marcos da Silva, 28 anos.
+DIAGNÓSTICO: Epilepsia Focal Estrutural.
+HISTÓRICO: Paciente apresenta crises convulsivas tônico-clônicas generalizadas desde os 15 anos. Faz uso regular de medicação, mas relatou dois episódios de "ausência" no último mês após privação de sono.
+MEDICAÇÃO ATUAL: Fenobarbital 100mg (1x ao dia) e Ácido Valproico 500mg (2x ao dia).
+PLANO TERAPÊUTICO: Solicitação de novo Eletroencefalograma (EEG) e Ressonância Magnética de crânio para avaliar foco epileptogênico. Manter medicação.

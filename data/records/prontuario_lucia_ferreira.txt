@@ -1,0 +1,6 @@
+ID: 55621 | DATA: 08/03/2024
+PACIENTE: Lúcia Ferreira, 52 anos.
+DIAGNÓSTICO: Asma Brônquica Persistente Moderada.
+QUADRO CLÍNICO: Episódios de dispneia e sibilância (chiado no peito) agravados por exposição a mofo e mudanças bruscas de temperatura.
+EXAMES: Espirometria mostra distúrbio ventilatório obstrutivo com resposta significativa ao broncodilatador.
+PRESCRIÇÃO: Budesonida 200mcg + Formoterol 6mcg (Inalação de 12h em 12h). Salbutamol spray (bombinha) apenas em caso de crise de resgate.
