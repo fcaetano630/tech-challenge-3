@@ -24,7 +24,7 @@ logging.basicConfig(
 )
 
 # --- CONFIGURAÇÃO DE HARDWARE ---
-# Mude para False se a sua GPU (Série 50) ainda apresentar erro de Kernel
+# Se a RTX 5080 der erro de "Kernel", mude para False para usar o Ryzen 9800X3D
 USE_GPU = True 
 
 if USE_GPU:
@@ -53,7 +53,7 @@ def start_assistant():
     try:
         model = AutoModelForCausalLM.from_pretrained(
             base_model_id,
-            dtype=dtype_config, # Atualizado de torch_dtype para dtype
+            torch_dtype=dtype_config,
             device_map=device_map,
             trust_remote_code=True
         )
@@ -65,14 +65,14 @@ def start_assistant():
             tokenizer.pad_token = tokenizer.eos_token
         model.eval()
     except Exception as e:
-        print(f"❌ Erro no carregamento do modelo: {e}")
+        print(f"❌ Erro no carregamento: {e}")
         return
 
-    # 3. Preparação do RAG (Requisito: Consulta em base de dados)
+    # 3. Preparação do RAG
     print("📄 Indexando prontuários locais...")
     if not os.path.exists(records_dir): os.makedirs(records_dir)
 
-    # CORREÇÃO DE ENCODING: Adicionado loader_kwargs para ler acentos (UTF-8)
+    # Loader configurado com UTF-8 para evitar erros de acentuação
     loader = DirectoryLoader(
         records_dir, 
         glob="*.txt", 
@@ -80,26 +80,20 @@ def start_assistant():
         loader_kwargs={'encoding': 'utf-8'}
     )
     
-    try:
-        documents = loader.load()
-    except Exception as e:
-        print(f"❌ Erro ao ler arquivos: {e}")
-        return
+    documents = loader.load()
 
     if not documents:
-        print("⚠️ Aviso: Nenhum prontuário encontrado em data/records/.")
+        print("⚠️ Aviso: Nenhum prontuário encontrado.")
         vectorstore = None
     else:
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
         texts = text_splitter.split_documents(documents)
-        
-        # Embeddings (Processamento de linguagem natural)
         embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-L6-v2",
             model_kwargs={'device': 'cpu'}
         )
         vectorstore = FAISS.from_documents(texts, embeddings)
-        print(f"✅ {len(documents)} prontuários indexados com sucesso!")
+        print(f"✅ {len(documents)} prontuários indexados!")
 
     # --- NÓS DO LANGGRAPH ---
 
@@ -107,10 +101,9 @@ def start_assistant():
         """Busca as informações no prontuário (RAG)"""
         pergunta = state['pergunta']
         fontes = []
-        contexto = "Nenhum histórico localizado no prontuário."
+        contexto = "Nenhum histórico localizado."
         
         if vectorstore:
-            # Requisito: Explainability (Indicar a fonte)
             docs = vectorstore.similarity_search(pergunta, k=2)
             contexto = "\n".join([d.page_content for d in docs])
             fontes = list(set([os.path.basename(d.metadata['source']) for d in docs]))
@@ -118,10 +111,15 @@ def start_assistant():
         return {"contexto": contexto, "fontes": fontes}
 
     def no_gerador(state: AgentState):
-        """Gera a resposta em Português"""
-        prompt = f"""Você é um assistente médico brasileiro. Responda em Português (Brasil).
-Use o CONHECIMENTO DO PRONTUÁRIO abaixo para responder à pergunta de forma precisa.
-Se a informação não estiver no prontuário, responda que não encontrou dados nos registros.
+        """Gera a resposta focando na extração do nome do paciente"""
+        # Prompt otimizado para não ignorar o nome do paciente
+        prompt = f"""Você é um assistente médico brasileiro de alta precisão.
+Responda SEMPRE em Português (Brasil).
+
+INSTRUÇÃO:
+1. Identifique o NOME do paciente citado no prontuário abaixo.
+2. Responda à pergunta usando EXCLUSIVAMENTE os dados fornecidos.
+3. Se a pergunta for "Quem tem X doença", localize o nome no início do texto.
 
 CONHECIMENTO DO PRONTUÁRIO:
 {state['contexto']}
@@ -129,7 +127,7 @@ CONHECIMENTO DO PRONTUÁRIO:
 PERGUNTA:
 {state['pergunta']}
 
-RESPOSTA MÉDICA EM PORTUGUÊS:"""
+RESPOSTA MÉDICA (Seja direto e cite o nome do paciente):"""
 
         inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if USE_GPU else "cpu")
         
@@ -137,22 +135,20 @@ RESPOSTA MÉDICA EM PORTUGUÊS:"""
             outputs = model.generate(
                 **inputs, 
                 max_new_tokens=300,
-                temperature=0.1, 
-                repetition_penalty=1.2,
+                temperature=0.2, # Leve aumento para melhorar a associação de ideias
+                repetition_penalty=1.1,
                 do_sample=True,
                 pad_token_id=tokenizer.eos_token_id
             )
         
         res_full = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        # Limpa a resposta para exibir apenas o que a IA criou
-        res_limpa = res_full.split("RESPOSTA MÉDICA EM PORTUGUÊS:")[-1].strip()
+        res_limpa = res_full.split("RESPOSTA MÉDICA (Seja direto e cite o nome do paciente):")[-1].strip()
         
-        # Requisito: Segurança (Nunca prescrever sem validação humana)
-        aviso_legal = "\n\n⚠️ IMPORTANTE: Esta é uma análise de apoio à decisão clínica. Toda conduta e prescrição deve ser validada por um médico responsável."
+        aviso = "\n\n⚠️ Apoio à decisão clínica. Validar conduta com um médico responsável."
         
-        return {"resposta": res_limpa + aviso_legal}
+        return {"resposta": res_limpa + aviso}
 
-    # CONSTRUÇÃO DO FLUXO (LangGraph)
+    # CONSTRUÇÃO DO GRAFO
     workflow = StateGraph(AgentState)
     workflow.add_node("recuperar", no_recuperador)
     workflow.add_node("gerar", no_gerador)
@@ -161,27 +157,21 @@ RESPOSTA MÉDICA EM PORTUGUÊS:"""
     workflow.add_edge("gerar", END)
     app = workflow.compile()
 
-    # 5. Interface de Chat
-    print("\n🩺 Assistente pronto! Digite sua pergunta ou 'sair'.")
+    # 5. Interface
+    print("\n🩺 Assistente pronto!")
     while True:
-        msg = input("\nMédico: ")
+        msg = input("\nVocê: ")
         if msg.lower() in ['sair', 'exit', 'quit']: break
         
         try:
-            # Invoca o grafo de estados
             resultado = app.invoke({"pergunta": msg})
-            
             print(f"\nIA Médica: {resultado['resposta']}")
+            print(f"📚 Fontes: {', '.join(resultado['fontes'])}")
             
-            # Requisito: Explicabilidade (Exibe os arquivos consultados)
-            if resultado['fontes']:
-                print(f"📚 Fontes: {', '.join(resultado['fontes'])}")
-            
-            # Requisito: Auditoria (Salva no log)
-            logging.info(f"Pergunta: {msg} | Fontes: {resultado['fontes']} | Resposta: {resultado['resposta']}")
+            logging.info(f"Q: {msg} | Fontes: {resultado['fontes']} | A: {resultado['resposta']}")
             
         except Exception as e:
-            print(f"\n❌ Erro durante o processamento: {e}")
+            print(f"\n❌ Erro: {e}")
 
 if __name__ == "__main__":
     start_assistant()
