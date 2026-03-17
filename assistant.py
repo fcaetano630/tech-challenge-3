@@ -113,21 +113,22 @@ def start_assistant():
     def no_gerador(state: AgentState):
         """Gera a resposta focando na extração do nome do paciente"""
         # Prompt otimizado para não ignorar o nome do paciente
-        prompt = f"""Você é um assistente médico brasileiro de alta precisão.
-Responda SEMPRE em Português (Brasil).
+        prompt = f"""Você é um assistente de análise de dados médicos brasileiros. 
+Sua função é APENAS extrair informações dos prontuários fornecidos.
 
-INSTRUÇÃO:
-1. Identifique o NOME do paciente citado no prontuário abaixo.
-2. Responda à pergunta usando EXCLUSIVAMENTE os dados fornecidos.
-3. Se a pergunta for "Quem tem X doença", localize o nome no início do texto.
+REGRAS DE OURO:
+1. NÃO use seu conhecimento prévio para indicar tratamentos.
+2. Responda APENAS com base no CONHECIMENTO DO PRONTUÁRIO abaixo.
+3. Se o prontuário não mencionar medicamentos específicos, diga: "Não há indicação de medicamentos registrada para este caso nos arquivos consultados".
+4. NUNCA responda perguntas genéricas sobre doenças sem associá-las a um paciente da base.
 
 CONHECIMENTO DO PRONTUÁRIO:
 {state['contexto']}
 
-PERGUNTA:
+PERGUNTA DO MÉDICO:
 {state['pergunta']}
 
-RESPOSTA MÉDICA (Seja direto e cite o nome do paciente):"""
+RESPOSTA (Baseada estritamente no documento):"""
 
         inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if USE_GPU else "cpu")
         
