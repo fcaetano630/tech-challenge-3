@@ -13,9 +13,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
 
-# 1. Configurações Iniciais e Auditoria
+# 1. Configurações de Auditoria
 load_dotenv()
-
 logging.basicConfig(
     filename='auditoria_medica.log',
     level=logging.INFO,
@@ -23,7 +22,7 @@ logging.basicConfig(
     encoding='utf-8'
 )
 
-# --- CONFIGURAÇÃO DE HARDWARE (RTX 5080 ou CPU) ---
+# --- CONFIGURAÇÃO DE HARDWARE ---
 USE_GPU = True 
 
 if USE_GPU:
@@ -33,7 +32,6 @@ else:
     device_map = {"": "cpu"}
     dtype_config = torch.float32 
 
-# Definição do Estado do Agente
 class AgentState(TypedDict):
     pergunta: str
     contexto: str
@@ -41,13 +39,13 @@ class AgentState(TypedDict):
     fontes: List[str]
 
 def start_assistant():
-    print(f"\n--- 🏥 Assistente Médico Híbrido (Hardware: {'GPU' if USE_GPU else 'CPU'}) ---")
+    print(f"\n--- 🏥 Assistente Médico (Hardware: {'GPU' if USE_GPU else 'CPU'}) ---")
     
     base_model_id = "unsloth/llama-3-8b-bnb-4bit"
     adapter_path = "model" 
     records_dir = "data/records"
 
-    # 2. Carregar Modelo + Fine-tuning
+    # 2. Carregar Modelo + Seu Fine-tuning (800 gerações)
     print("🤖 Carregando cérebro da IA...")
     try:
         model = AutoModelForCausalLM.from_pretrained(
@@ -56,7 +54,7 @@ def start_assistant():
             device_map=device_map,
             trust_remote_code=True
         )
-        print("🔧 Aplicando seu treinamento especializado...")
+        print(f"🔧 Aplicando adaptador de treino: {adapter_path}")
         model = PeftModel.from_pretrained(model, adapter_path)
         
         tokenizer = AutoTokenizer.from_pretrained(base_model_id)
@@ -67,8 +65,8 @@ def start_assistant():
         print(f"❌ Erro no carregamento: {e}")
         return
 
-    # 3. Preparação do RAG (Consulta de Dados)
-    print("📄 Indexando prontuários locais (UTF-8)...")
+    # 3. Preparação do RAG
+    print("📄 Indexando prontuários locais...")
     if not os.path.exists(records_dir): os.makedirs(records_dir)
 
     loader = DirectoryLoader(
@@ -81,25 +79,26 @@ def start_assistant():
     documents = loader.load()
 
     if not documents:
-        print("⚠️ Aviso: Pasta data/records vazia.")
+        print("⚠️ Aviso: Nenhum prontuário encontrado.")
         vectorstore = None
     else:
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
+        # Aumentamos o chunk para garantir que o nome do paciente não seja separado do diagnóstico
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
         texts = text_splitter.split_documents(documents)
         embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-L6-v2",
             model_kwargs={'device': 'cpu'}
         )
         vectorstore = FAISS.from_documents(texts, embeddings)
-        print(f"✅ {len(documents)} arquivos prontos para consulta!")
+        print(f"✅ {len(documents)} prontuários indexados!")
 
     # --- NÓS DO LANGGRAPH ---
 
     def no_recuperador(state: AgentState):
-        """Busca fatos no prontuário para apoiar a IA"""
+        """Busca os fatos no prontuário (RAG)"""
         pergunta = state['pergunta']
         fontes = []
-        contexto = "Nenhum histórico específico encontrado nos arquivos locais."
+        contexto = "Informação não localizada nos registros locais."
         
         if vectorstore:
             docs = vectorstore.similarity_search(pergunta, k=2)
@@ -109,19 +108,20 @@ def start_assistant():
         return {"contexto": contexto, "fontes": fontes}
 
     def no_gerador(state: AgentState):
-        """Gera a resposta usando o modelo treinado + contexto extraído"""
-        # Formato de instrução otimizado para o Llama-3 brilhar
+        """Gera a resposta focando no contexto fornecido"""
+        
+        # PROMPT DE ALTA ATENÇÃO: Força o modelo a olhar para o contexto do RAG
         prompt = f"""### Instrução:
-Você é um médico assistente altamente qualificado. Sua tarefa é responder à pergunta do usuário de forma profissional, clara e ética. 
-Utilize o contexto do prontuário abaixo se ele for relevante, mas use também seu conhecimento clínico especializado para formular a melhor resposta.
+Você é o médico responsável. Analise o PRONTUÁRIO abaixo e responda à pergunta identificando claramente o paciente. 
+Não use informações de outros pacientes ou conhecimentos gerais que conflitem com este documento.
 
-### Contexto do Prontuário Local:
+### PRONTUÁRIO PARA ANÁLISE:
 {state['contexto']}
 
-### Pergunta do Usuário:
+### PERGUNTA DO COLEGA MÉDICO:
 {state['pergunta']}
 
-### Resposta Médica (em Português):"""
+### RESPOSTA MÉDICA (Identifique o Paciente e o Caso):"""
 
         inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if USE_GPU else "cpu")
         
@@ -129,23 +129,21 @@ Utilize o contexto do prontuário abaixo se ele for relevante, mas use também s
             outputs = model.generate(
                 **inputs, 
                 max_new_tokens=400,
-                temperature=0.7, # Aumentado para permitir o uso do conhecimento do Fine-tuning
-                top_p=0.9,
-                repetition_penalty=1.1,
+                temperature=0.3, # Reduzido para maior fidelidade aos dados do prontuário
+                top_p=0.85,
+                repetition_penalty=1.2, # Evita que ele 'vicie' em frases do treino
                 do_sample=True,
                 pad_token_id=tokenizer.eos_token_id
             )
         
         res_full = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        # Extrai apenas a parte da resposta após o cabeçalho
-        res_limpa = res_full.split("### Resposta Médica (em Português):")[-1].strip()
+        res_limpa = res_full.split("### RESPOSTA MÉDICA (Identifique o Paciente e o Caso):")[-1].strip()
         
-        # Guardrail de Segurança (Obrigatório)
-        aviso = "\n\n---\n[Apoio à decisão clínica. Esta análise deve ser validada por um profissional médico.]"
+        aviso = "\n\n---\n⚠️ [Apoio à decisão clínica. Validar conduta com médico responsável.]"
         
         return {"resposta": res_limpa + aviso}
 
-    # CONSTRUÇÃO DO FLUXO (LangGraph)
+    # CONSTRUÇÃO DO GRAFO (LangGraph)
     workflow = StateGraph(AgentState)
     workflow.add_node("recuperar", no_recuperador)
     workflow.add_node("gerar", no_gerador)
@@ -154,27 +152,23 @@ Utilize o contexto do prontuário abaixo se ele for relevante, mas use também s
     workflow.add_edge("gerar", END)
     app = workflow.compile()
 
-    # 5. Interface de Chat
-    print("\n🩺 Assistente pronto! (Digite 'sair' para encerrar)")
+    # 5. Loop de Atendimento
+    print("\n🩺 Assistente pronto! (Digite 'sair')")
     while True:
-        msg = input("\nVocê: ")
+        msg = input("\nPergunta: ")
         if msg.lower() in ['sair', 'exit', 'quit']: break
         
         try:
-            # Execução via LangGraph
             resultado = app.invoke({"pergunta": msg})
             
-            print(f"\nIA Médica: {resultado['resposta']}")
-            
-            # Exibe as fontes para cumprir o requisito de Explainability
+            print(f"\nIA: {resultado['resposta']}")
             if resultado['fontes']:
-                print(f"📚 Fontes consultadas: {', '.join(resultado['fontes'])}")
+                print(f"📚 Fonte: {', '.join(resultado['fontes'])}")
             
-            # Auditoria em log
-            logging.info(f"Pergunta: {msg} | Fontes: {resultado['fontes']} | Resposta: {resultado['resposta']}")
+            logging.info(f"Q: {msg} | Fontes: {resultado['fontes']} | A: {resultado['resposta']}")
             
         except Exception as e:
-            print(f"\n❌ Erro no processamento: {e}")
+            print(f"\n❌ Erro: {e}")
 
 if __name__ == "__main__":
     start_assistant()
