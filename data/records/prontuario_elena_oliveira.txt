@@ -1,6 +1,6 @@
-ID: 11203 | DATA: 12/03/2024
-PACIENTE: Elena Oliveira, 12 anos.
-DIAGNÓSTICO: Diabetes Mellitus Tipo 1.
-SINTOMAS: Polidipsia (sede excessiva) e perda ponderal de 4kg em 15 dias. Glicemia de jejum atual: 240 mg/dL.
-CONDUTA: Início imediato de insulinoterapia. Orientação para contagem de carboidratos em todas as refeições.
-PRESCRIÇÃO: Insulina Glargina (Lantus) 10 UI à noite e Insulina Lispro (Humalog) conforme esquema de correção pré-refeição.
+ID: 11203 | DATE: 03/12/2024
+PATIENT: Elena Oliveira, 12 years old.
+DIAGNOSIS: Type 1 Diabetes Mellitus.
+SYMPTOMS: Polydipsia (excessive thirst) and weight loss of 4 kg in 15 days. Current fasting blood glucose: 240 mg/dL.
+MANAGEMENT: Immediate initiation of insulin therapy. Guidance on carbohydrate counting at all meals.
+PRESCRIPTION: Insulin Glargine (Lantus) 10 IU at night and Insulin Lispro (Humalog) according to pre-meal correction scale.

@@ -1,6 +1,6 @@
-ID: 55621 | DATA: 08/03/2024
-PACIENTE: Lúcia Ferreira, 52 anos.
-DIAGNÓSTICO: Asma Brônquica Persistente Moderada.
-QUADRO CLÍNICO: Episódios de dispneia e sibilância (chiado no peito) agravados por exposição a mofo e mudanças bruscas de temperatura.
-EXAMES: Espirometria mostra distúrbio ventilatório obstrutivo com resposta significativa ao broncodilatador.
-PRESCRIÇÃO: Budesonida 200mcg + Formoterol 6mcg (Inalação de 12h em 12h). Salbutamol spray (bombinha) apenas em caso de crise de resgate.
+ID: 55621 | DATE: 03/08/2024
+PATIENT: Lúcia Ferreira, 52 years old.
+DIAGNOSIS: Moderate Persistent Bronchial Asthma.
+CLINICAL PRESENTATION: Episodes of dyspnea and wheezing (chest whistling) worsened by exposure to mold and sudden temperature changes.
+TESTS: Spirometry shows an obstructive ventilatory disorder with a significant response to bronchodilator.
+PRESCRIPTION: Budesonide 200 mcg + Formoterol 6 mcg (inhalation every 12 hours). Salbutamol inhaler (rescue spray) only in case of acute exacerbation.

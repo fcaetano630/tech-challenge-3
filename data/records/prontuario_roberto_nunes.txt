@@ -1,6 +1,6 @@
-ID: 88754 | DATA: 10/03/2024
-PACIENTE: Roberto Nunes, 34 anos.
-DIAGNÓSTICO: Ruptura Total do Ligamento Cruzado Anterior (LCA) - Joelho Esquerdo.
-CAUSA: Trauma torcional durante partida de futebol há 48 horas. Apresenta edema acentuado (grau +++/4) e instabilidade ao teste de Lachman.
-PLANO: Encaminhamento para Cirurgia de Reconstrução de LCA via artroscopia.
-OBSERVAÇÃO: Iniciar fisioterapia pré-operatória imediata para redução do edema e ganho de ADM (Amplitude de Movimento).
+ID: 88754 | DATE: 03/10/2024
+PATIENT: Roberto Nunes, 34 years old.
+DIAGNOSIS: Complete Rupture of the Anterior Cruciate Ligament (ACL) – Left Knee.
+CAUSE: Torsional trauma during a soccer match 48 hours ago. Presents marked edema (grade +++/4) and instability on the Lachman test.
+PLAN: Referral for ACL reconstruction surgery via arthroscopy.
+NOTE: Initiate immediate preoperative physical therapy to reduce edema and improve ROM (Range of Motion).
